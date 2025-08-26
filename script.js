@@ -17,8 +17,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Carga del Modelo de IA ---
     async function loadModel() {
-        statusDiv.textContent = 'Cargando modelo de IA...';
-        depthEstimator = await window.pipeline('depth-estimation', 'Xenova/depth-anything-small-hf');
+        statusDiv.textContent = 'Cargando modelo de IA (sólo la primera vez)...';
+        depthEstimator = await window.pipeline('depth-estimation', 'Xenova/depth-anything-small-hf', {
+            progress_callback: data => {
+                if (data.status === 'progress') {
+                    statusDiv.textContent = `Cargando modelo... ${data.progress.toFixed(1)}%`;
+                }
+            }
+        });
         statusDiv.textContent = 'Modelo cargado. Selecciona una imagen o activa la cámara.';
         uploadLabel.textContent = 'Seleccionar Archivo';
         uploadLabel.classList.remove('disabled');
@@ -26,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     loadModel();
 
-    // --- Procesamiento de la Imagen ---
+    // --- Procesamiento de la Imagen (Subida de Archivo) ---
     imageUpload.addEventListener('change', (event) => {
         const file = event.target.files[0];
         if (!file) return;
@@ -38,16 +44,18 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         reader.readAsDataURL(file);
     });
-    
+
     // --- Lógica de la Cámara ---
     cameraButton.addEventListener('click', async () => {
         cameraView.classList.remove('hidden');
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'environment' }
+            });
             videoFeed.srcObject = stream;
         } catch (error) {
             console.error("Error al acceder a la cámara:", error);
-            statusDiv.textContent = "Error: No se pudo acceder a la cámara.";
+            statusDiv.textContent = "Error: No se pudo acceder a la cámara. Asegúrate de dar permisos.";
             cameraView.classList.add('hidden');
         }
     });
@@ -58,14 +66,18 @@ document.addEventListener('DOMContentLoaded', () => {
         tempCanvas.height = videoFeed.videoHeight;
         const ctx = tempCanvas.getContext('2d');
         ctx.drawImage(videoFeed, 0, 0, tempCanvas.width, tempCanvas.height);
+        
         const imageDataUrl = tempCanvas.toDataURL('image/jpeg');
         originalImage.src = imageDataUrl;
         resultsContainer.classList.remove('hidden');
+        
         processImage(imageDataUrl);
         closeCamera();
     });
 
-    closeCameraButton.addEventListener('click', () => closeCamera());
+    closeCameraButton.addEventListener('click', () => {
+        closeCamera();
+    });
 
     function closeCamera() {
         if (stream) {
@@ -74,34 +86,42 @@ document.addEventListener('DOMContentLoaded', () => {
         cameraView.classList.add('hidden');
     }
 
-    // --- Lógica de IA ---
+    // --- Lógica de IA y Dibujado en Canvas ---
     async function processImage(imageUrl) {
         if (!depthEstimator) {
-            statusDiv.textContent = 'El modelo de IA no está listo.';
+            statusDiv.textContent = 'El modelo de IA no está listo. Espera un momento.';
             return;
         }
-        statusDiv.textContent = 'Analizando profundidad...';
+        statusDiv.textContent = 'Analizando profundidad... Esto puede tardar unos segundos.';
         
         try {
             const output = await depthEstimator(imageUrl);
+            statusDiv.textContent = 'Procesamiento completo. Dibujando mapa de profundidad...';
             
-            // =================================================================
-            // **AQUÍ ESTÁ LA CLAVE**
-            // Imprimimos el objeto 'output' COMPLETO para ver qué nos da la IA.
-            console.log('--- RADIOGRAFÍA DEL OUTPUT DE LA IA ---');
-            console.log(output);
-            // =================================================================
-
-            // El resto del código que fallaba está comentado para que no se rompa
-            // y podamos ver la salida de la consola.
-            // statusDiv.textContent = 'Procesamiento completo. El debug está en la consola.';
-            // if (output && output.predicted_depth) {
-            //     drawDepthMap(output.predicted_depth);
-            // }
+            if (output && output.predicted_depth) {
+                drawDepthMap(output.predicted_depth);
+                statusDiv.textContent = '¡Listo!';
+            } else {
+                throw new Error("La salida del modelo de IA no es válida.");
+            }
 
         } catch (error) {
             console.error('Error durante la estimación de profundidad:', error);
             statusDiv.textContent = `Error al procesar la imagen: ${error.message}`;
         }
+    }
+
+    // **VERSIÓN SIMPLIFICADA Y CORRECTA DE LA FUNCIÓN DE DIBUJO**
+    async function drawDepthMap(tensor) {
+        // La librería nos da una función para convertir el tensor a una imagen de canvas.
+        const imageData = await tensor.toImageData();
+
+        // Ajustamos el tamaño del canvas a la imagen resultante
+        depthMapCanvas.width = imageData.width;
+        depthMapCanvas.height = imageData.height;
+        
+        // Obtenemos el contexto y pintamos la imagen. ¡Y ya está!
+        const ctx = depthMapCanvas.getContext('2d');
+        ctx.putImageData(imageData, 0, 0);
     }
 });
