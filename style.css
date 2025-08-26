@@ -111,3 +111,71 @@ h1 {
         max-width: 500px;
     }
 }
+
+
+/* --- ESTILOS AÑADIDOS --- */
+.upload-section {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.upload-button.secondary {
+    background-color: transparent;
+    border: 1px solid var(--accent-color);
+    color: var(--accent-color);
+}
+.upload-button.secondary:hover:not(.disabled) {
+    background-color: var(--accent-color);
+    color: var(--bg-color);
+}
+
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: var(--card-bg);
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    text-align: center;
+}
+
+#video-feed {
+    width: 100%;
+    max-width: 640px;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+.camera-controls {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.camera-controls button {
+    background-color: var(--accent-color);
+    color: var(--bg-color);
+    padding: 0.8rem 1.5rem;
+    border-radius: 5px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s ease;
+}
+.camera-controls button:hover {
+    background-color: var(--accent-hover);
+}
