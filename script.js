@@ -114,15 +114,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawDepthMap(tensor) {
-        // =================================================================
-        // **AQUÍ ESTÁ EL CÓDIGO DE DEPURACIÓN**
-        // Vamos a imprimir el objeto 'tensor' en la consola para ver qué contiene.
-        console.log('--- DEBUG: Objeto TENSOR RECIBIDO ---');
-        console.log(tensor);
-        // =================================================================
+        console.log('--- DEBUG: Objeto TENSOR RECIBIDO ---', tensor);
 
-        const [_, height, width] = tensor.dims;
-        const data = tensor.data;
+        let height, width, data;
+
+        // Caso 1: formato Tensor clásico con dims
+        if (tensor.dims && tensor.data) {
+            [, height, width] = tensor.dims;
+            data = tensor.data;
+
+        // Caso 2: formato objeto con height, width, data
+        } else if ('height' in tensor && 'width' in tensor && 'data' in tensor) {
+            height = tensor.height;
+            width = tensor.width;
+            data = tensor.data;
+
+        // Caso 3: ya es un ImageData listo
+        } else if (tensor instanceof ImageData) {
+            depthMapCanvas.width = tensor.width;
+            depthMapCanvas.height = tensor.height;
+            const ctx = depthMapCanvas.getContext("2d");
+            ctx.putImageData(tensor, 0, 0);
+            return;
+
+        } else {
+            console.error("Formato de tensor no soportado:", tensor);
+            statusDiv.textContent = "Error: formato de salida inesperado del modelo.";
+            return;
+        }
 
         if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
             console.error("Dimensiones inválidas recibidas del tensor:", {width, height});
@@ -130,14 +149,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const canvasWidth = Math.round(width);
-        const canvasHeight = Math.round(height);
-        
-        depthMapCanvas.width = canvasWidth;
-        depthMapCanvas.height = canvasHeight;
-        
+        depthMapCanvas.width = Math.round(width);
+        depthMapCanvas.height = Math.round(height);
+
         const ctx = depthMapCanvas.getContext('2d');
-        const imageData = ctx.createImageData(canvasWidth, canvasHeight);
+        const imageData = ctx.createImageData(width, height);
 
         let minDepth = Infinity;
         let maxDepth = -Infinity;
