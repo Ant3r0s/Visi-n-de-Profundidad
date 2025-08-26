@@ -7,8 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsContainer = document.getElementById('results-container');
     const originalImage = document.getElementById('original-image');
     const depthMapCanvas = document.getElementById('depth-map-canvas');
-
-    // Elementos de la cámara
     const cameraView = document.getElementById('camera-view');
     const videoFeed = document.getElementById('video-feed');
     const snapButton = document.getElementById('snap-button');
@@ -19,14 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Carga del Modelo de IA ---
     async function loadModel() {
-        statusDiv.textContent = 'Cargando modelo de IA (sólo la primera vez)...';
-        depthEstimator = await window.pipeline('depth-estimation', 'Xenova/depth-anything-small-hf', {
-            progress_callback: data => {
-                if (data.status === 'progress') {
-                    statusDiv.textContent = `Cargando modelo... ${data.progress.toFixed(1)}%`;
-                }
-            }
-        });
+        statusDiv.textContent = 'Cargando modelo de IA...';
+        depthEstimator = await window.pipeline('depth-estimation', 'Xenova/depth-anything-small-hf');
         statusDiv.textContent = 'Modelo cargado. Selecciona una imagen o activa la cámara.';
         uploadLabel.textContent = 'Seleccionar Archivo';
         uploadLabel.classList.remove('disabled');
@@ -34,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     loadModel();
 
-    // --- Procesamiento de la Imagen (Subida de Archivo) ---
+    // --- Procesamiento de la Imagen ---
     imageUpload.addEventListener('change', (event) => {
         const file = event.target.files[0];
         if (!file) return;
@@ -46,18 +38,16 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         reader.readAsDataURL(file);
     });
-
+    
     // --- Lógica de la Cámara ---
     cameraButton.addEventListener('click', async () => {
         cameraView.classList.remove('hidden');
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'environment' }
-            });
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             videoFeed.srcObject = stream;
         } catch (error) {
             console.error("Error al acceder a la cámara:", error);
-            statusDiv.textContent = "Error: No se pudo acceder a la cámara. Asegúrate de dar permisos.";
+            statusDiv.textContent = "Error: No se pudo acceder a la cámara.";
             cameraView.classList.add('hidden');
         }
     });
@@ -68,18 +58,14 @@ document.addEventListener('DOMContentLoaded', () => {
         tempCanvas.height = videoFeed.videoHeight;
         const ctx = tempCanvas.getContext('2d');
         ctx.drawImage(videoFeed, 0, 0, tempCanvas.width, tempCanvas.height);
-        
         const imageDataUrl = tempCanvas.toDataURL('image/jpeg');
         originalImage.src = imageDataUrl;
         resultsContainer.classList.remove('hidden');
-        
         processImage(imageDataUrl);
         closeCamera();
     });
 
-    closeCameraButton.addEventListener('click', () => {
-        closeCamera();
-    });
+    closeCameraButton.addEventListener('click', () => closeCamera());
 
     function closeCamera() {
         if (stream) {
@@ -88,80 +74,34 @@ document.addEventListener('DOMContentLoaded', () => {
         cameraView.classList.add('hidden');
     }
 
-    // --- Lógica de IA y Dibujado en Canvas ---
+    // --- Lógica de IA ---
     async function processImage(imageUrl) {
         if (!depthEstimator) {
-            statusDiv.textContent = 'El modelo de IA no está listo. Espera un momento.';
+            statusDiv.textContent = 'El modelo de IA no está listo.';
             return;
         }
-        statusDiv.textContent = 'Analizando profundidad... Esto puede tardar unos segundos.';
+        statusDiv.textContent = 'Analizando profundidad...';
         
         try {
             const output = await depthEstimator(imageUrl);
-            statusDiv.textContent = 'Procesamiento completo. Dibujando mapa de profundidad...';
             
-            if (output && output.predicted_depth) {
-                drawDepthMap(output.predicted_depth);
-                statusDiv.textContent = '¡Listo!';
-            } else {
-                throw new Error("La salida del modelo de IA no es válida.");
-            }
+            // =================================================================
+            // **AQUÍ ESTÁ LA CLAVE**
+            // Imprimimos el objeto 'output' COMPLETO para ver qué nos da la IA.
+            console.log('--- RADIOGRAFÍA DEL OUTPUT DE LA IA ---');
+            console.log(output);
+            // =================================================================
+
+            // El resto del código que fallaba está comentado para que no se rompa
+            // y podamos ver la salida de la consola.
+            // statusDiv.textContent = 'Procesamiento completo. El debug está en la consola.';
+            // if (output && output.predicted_depth) {
+            //     drawDepthMap(output.predicted_depth);
+            // }
 
         } catch (error) {
             console.error('Error durante la estimación de profundidad:', error);
             statusDiv.textContent = `Error al procesar la imagen: ${error.message}`;
         }
-    }
-
-    function drawDepthMap(tensor) {
-        // **AQUÍ ESTÁ LA SOLUCIÓN DEFINITIVA**
-
-        // Primero, comprobamos que el tensor y sus datos existen.
-        if (!tensor || !tensor.dims || !tensor.data) {
-            console.error("Tensor inválido o incompleto recibido:", tensor);
-            statusDiv.textContent = "Error: La IA devolvió datos corruptos.";
-            return;
-        }
-
-        // Sabemos que la altura viene en la segunda posición del array 'dims'.
-        const height = tensor.dims[1];
-        const data = tensor.data;
-
-        // Calculamos el ancho dividiendo el total de píxeles por el alto.
-        const width = Math.floor(data.length / height);
-
-        // Mantenemos el control de calidad por si acaso.
-        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-            console.error("Dimensiones calculadas inválidas:", {width, height});
-            statusDiv.textContent = "Error: No se pudieron calcular las dimensiones de la imagen.";
-            return;
-        }
-
-        depthMapCanvas.width = width;
-        depthMapCanvas.height = height;
-        
-        const ctx = depthMapCanvas.getContext('2d');
-        const imageData = ctx.createImageData(width, height);
-
-        let minDepth = Infinity;
-        let maxDepth = -Infinity;
-        for (let i = 0; i < data.length; i++) {
-            if (data[i] < minDepth) minDepth = data[i];
-            if (data[i] > maxDepth) maxDepth = data[i];
-        }
-        const range = maxDepth - minDepth;
-
-        for (let i = 0; i < data.length; i++) {
-            const normalized = range > 0 ? (data[i] - minDepth) / range : 0;
-            const grayscale = Math.floor(normalized * 255);
-            
-            const pixelIndex = i * 4;
-            imageData.data[pixelIndex] = grayscale;
-            imageData.data[pixelIndex + 1] = grayscale;
-            imageData.data[pixelIndex + 2] = grayscale;
-            imageData.data[pixelIndex + 3] = 255;
-        }
-
-        ctx.putImageData(imageData, 0, 0);
     }
 });
