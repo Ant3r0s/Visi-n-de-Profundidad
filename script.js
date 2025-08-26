@@ -114,50 +114,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawDepthMap(tensor) {
-        console.log('--- DEBUG: Objeto TENSOR RECIBIDO ---', tensor);
+        // **AQUÍ ESTÁ LA SOLUCIÓN DEFINITIVA**
 
-        let height, width, data;
-
-        // Caso 1: formato Tensor clásico con dims
-        if (tensor.dims && tensor.data) {
-            [, height, width] = tensor.dims;
-            data = tensor.data;
-
-        // Caso 2: formato objeto con height, width, data
-        } else if ('height' in tensor && 'width' in tensor && 'data' in tensor) {
-            height = tensor.height;
-            width = tensor.width;
-            data = tensor.data;
-
-        // Caso 2.1: tiene height y data, pero no width → lo calculamos
-        } else if ('height' in tensor && 'data' in tensor) {
-            height = tensor.height;
-            data = tensor.data;
-            width = Math.floor(data.length / height);
-
-        // Caso 3: ya es un ImageData listo
-        } else if (tensor instanceof ImageData) {
-            depthMapCanvas.width = tensor.width;
-            depthMapCanvas.height = tensor.height;
-            const ctx = depthMapCanvas.getContext("2d");
-            ctx.putImageData(tensor, 0, 0);
-            return;
-
-        } else {
-            console.error("Formato de tensor no soportado:", tensor);
-            statusDiv.textContent = "Error: formato de salida inesperado del modelo.";
+        // Primero, comprobamos que el tensor y sus datos existen.
+        if (!tensor || !tensor.dims || !tensor.data) {
+            console.error("Tensor inválido o incompleto recibido:", tensor);
+            statusDiv.textContent = "Error: La IA devolvió datos corruptos.";
             return;
         }
 
+        // Sabemos que la altura viene en la segunda posición del array 'dims'.
+        const height = tensor.dims[1];
+        const data = tensor.data;
+
+        // Calculamos el ancho dividiendo el total de píxeles por el alto.
+        const width = Math.floor(data.length / height);
+
+        // Mantenemos el control de calidad por si acaso.
         if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-            console.error("Dimensiones inválidas recibidas del tensor:", {width, height});
-            statusDiv.textContent = "Error: La IA devolvió dimensiones de imagen inválidas.";
+            console.error("Dimensiones calculadas inválidas:", {width, height});
+            statusDiv.textContent = "Error: No se pudieron calcular las dimensiones de la imagen.";
             return;
         }
 
-        depthMapCanvas.width = Math.round(width);
-        depthMapCanvas.height = Math.round(height);
-
+        depthMapCanvas.width = width;
+        depthMapCanvas.height = height;
+        
         const ctx = depthMapCanvas.getContext('2d');
         const imageData = ctx.createImageData(width, height);
 
