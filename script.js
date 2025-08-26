@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cameraView.classList.remove('hidden');
         try {
             stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'environment' } // Prioriza la cámara trasera en móviles
+                video: { facingMode: 'environment' }
             });
             videoFeed.srcObject = stream;
         } catch (error) {
@@ -99,25 +99,41 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const output = await depthEstimator(imageUrl);
             statusDiv.textContent = 'Procesamiento completo. Dibujando mapa de profundidad...';
-            drawDepthMap(output.predicted_depth);
-            statusDiv.textContent = '¡Listo!';
+            
+            // Comprobamos que el output es válido antes de intentar dibujar
+            if (output && output.predicted_depth) {
+                drawDepthMap(output.predicted_depth);
+                statusDiv.textContent = '¡Listo!';
+            } else {
+                throw new Error("La salida del modelo de IA no es válida.");
+            }
+
         } catch (error) {
             console.error('Error durante la estimación de profundidad:', error);
-            statusDiv.textContent = `Error: ${error.message}`;
+            statusDiv.textContent = `Error al procesar la imagen: ${error.message}`;
         }
     }
 
     function drawDepthMap(tensor) {
-        // **CORRECCIÓN DEL BUG:** Extraemos las dimensiones correctamente del tensor
         const [_, height, width] = tensor.dims;
         const data = tensor.data;
+
+        // **AQUÍ ESTÁ LA SOLUCIÓN: EL CONTROL DE CALIDAD**
+        // Comprobamos si las dimensiones son números válidos antes de continuar.
+        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+            console.error("Dimensiones inválidas recibidas del tensor:", {width, height});
+            statusDiv.textContent = "Error: La IA devolvió dimensiones de imagen inválidas.";
+            return; // Detenemos la función aquí para evitar el crash.
+        }
+
+        const canvasWidth = Math.round(width);
+        const canvasHeight = Math.round(height);
         
-        depthMapCanvas.width = width;
-        depthMapCanvas.height = height;
+        depthMapCanvas.width = canvasWidth;
+        depthMapCanvas.height = canvasHeight;
         
         const ctx = depthMapCanvas.getContext('2d');
-        // **CORRECCIÓN DEL BUG:** Usamos las dimensiones enteras para crear la imagen
-        const imageData = ctx.createImageData(Math.round(width), Math.round(height));
+        const imageData = ctx.createImageData(canvasWidth, canvasHeight);
 
         let minDepth = Infinity;
         let maxDepth = -Infinity;
@@ -128,8 +144,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const range = maxDepth - minDepth;
 
         for (let i = 0; i < data.length; i++) {
-            const normalized = (data[i] - minDepth) / range;
+            // Evitamos divisiones por cero si todos los valores son iguales
+            const normalized = range > 0 ? (data[i] - minDepth) / range : 0;
             const grayscale = Math.floor(normalized * 255);
+            
             const pixelIndex = i * 4;
             imageData.data[pixelIndex] = grayscale;
             imageData.data[pixelIndex + 1] = grayscale;
