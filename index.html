@@ -23,6 +23,7 @@
         <div class="upload-section">
             <input type="file" id="image-upload" accept="image/*" class="hidden">
             <label for="image-upload" id="upload-label" class="upload-button disabled">Cargando modelo...</label>
+            <button id="camera-button" class="upload-button secondary disabled">Activar Cámara</button>
         </div>
 
         <div id="status" class="status"></div>
@@ -30,7 +31,7 @@
         <div id="results-container" class="results-container hidden">
             <div class="image-box">
                 <h2>Original</h2>
-                <img id="original-image" alt="Imagen original subida por el usuario">
+                <img id="original-image" alt="Imagen original">
             </div>
             <div class="image-box">
                 <h2>Mapa de Profundidad</h2>
@@ -38,6 +39,17 @@
             </div>
         </div>
     </div>
+
+    <div id="camera-view" class="modal hidden">
+        <div class="modal-content">
+            <video id="video-feed" autoplay playsinline></video>
+            <div class="camera-controls">
+                <button id="snap-button">Sacar Foto</button>
+                <button id="close-camera-button">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js" type="module"></script>
 </body>
 </html>
