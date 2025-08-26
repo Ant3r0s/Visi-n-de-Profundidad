@@ -1,0 +1,113 @@
+:root {
+    --bg-color: #121212;
+    --text-color: #e0e0e0;
+    --header-color: #ffffff;
+    --accent-color: #03dac6;
+    --accent-hover: #00bfa5;
+    --card-bg: #1e1e1e;
+    --border-color: #333;
+}
+
+body {
+    font-family: 'Roboto Mono', monospace;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.container {
+    width: 100%;
+    max-width: 1200px;
+    text-align: center;
+}
+
+header {
+    margin-bottom: 2rem;
+}
+
+h1 {
+    color: var(--header-color);
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    color: var(--accent-color);
+    font-size: 1.1rem;
+}
+
+.upload-section {
+    margin-bottom: 1.5rem;
+}
+
+.upload-button {
+    background-color: var(--accent-color);
+    color: var(--bg-color);
+    padding: 1rem 2rem;
+    border-radius: 5px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    display: inline-block;
+}
+
+.upload-button:hover:not(.disabled) {
+    background-color: var(--accent-hover);
+}
+
+.upload-button.disabled {
+    background-color: #555;
+    cursor: not-allowed;
+}
+
+.status {
+    min-height: 24px;
+    margin-bottom: 2rem;
+}
+
+.results-container {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.image-box {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    padding: 1rem;
+    border-radius: 5px;
+    flex: 1;
+    min-width: 0; /* Soluciona problemas de flexbox con imágenes grandes */
+}
+
+.image-box h2 {
+    margin-top: 0;
+    border-bottom: 1px solid var(--accent-color);
+    padding-bottom: 0.5rem;
+}
+
+#original-image, #depth-map-canvas {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+}
+
+@media (max-width: 800px) {
+    .results-container {
+        flex-direction: column;
+        align-items: center;
+    }
+    .image-box {
+        width: 100%;
+        max-width: 500px;
+    }
+}
