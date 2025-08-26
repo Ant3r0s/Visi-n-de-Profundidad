@@ -129,6 +129,12 @@ document.addEventListener('DOMContentLoaded', () => {
             width = tensor.width;
             data = tensor.data;
 
+        // Caso 2.1: tiene height y data, pero no width → lo calculamos
+        } else if ('height' in tensor && 'data' in tensor) {
+            height = tensor.height;
+            data = tensor.data;
+            width = Math.floor(data.length / height);
+
         // Caso 3: ya es un ImageData listo
         } else if (tensor instanceof ImageData) {
             depthMapCanvas.width = tensor.width;
