@@ -100,7 +100,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const output = await depthEstimator(imageUrl);
             statusDiv.textContent = 'Procesamiento completo. Dibujando mapa de profundidad...';
             
-            // Comprobamos que el output es válido antes de intentar dibujar
             if (output && output.predicted_depth) {
                 drawDepthMap(output.predicted_depth);
                 statusDiv.textContent = '¡Listo!';
@@ -115,15 +114,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawDepthMap(tensor) {
+        // =================================================================
+        // **AQUÍ ESTÁ EL CÓDIGO DE DEPURACIÓN**
+        // Vamos a imprimir el objeto 'tensor' en la consola para ver qué contiene.
+        console.log('--- DEBUG: Objeto TENSOR RECIBIDO ---');
+        console.log(tensor);
+        // =================================================================
+
         const [_, height, width] = tensor.dims;
         const data = tensor.data;
 
-        // **AQUÍ ESTÁ LA SOLUCIÓN: EL CONTROL DE CALIDAD**
-        // Comprobamos si las dimensiones son números válidos antes de continuar.
         if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
             console.error("Dimensiones inválidas recibidas del tensor:", {width, height});
             statusDiv.textContent = "Error: La IA devolvió dimensiones de imagen inválidas.";
-            return; // Detenemos la función aquí para evitar el crash.
+            return;
         }
 
         const canvasWidth = Math.round(width);
@@ -144,7 +148,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const range = maxDepth - minDepth;
 
         for (let i = 0; i < data.length; i++) {
-            // Evitamos divisiones por cero si todos los valores son iguales
             const normalized = range > 0 ? (data[i] - minDepth) / range : 0;
             const grayscale = Math.floor(normalized * 255);
             
